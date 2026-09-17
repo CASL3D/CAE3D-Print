@@ -214,6 +214,11 @@
   .tool-btn:hover { box-shadow:0 4px 26px var(--green-glow); transform:translateY(-1px); }
   .tool-result { margin-top:22px; padding-top:20px; border-top:1px solid var(--hair); min-height:64px; }
   .tool-result .big { font-family:var(--serif); font-size:30px; background:var(--grad-green); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .price-pair { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .price-item { text-align:left; }
+  .price-item .big.mxn { background:none; -webkit-text-fill-color:initial; color:var(--text); }
+  .price-currency { font-size:12px; color:var(--muted2); margin-top:2px; }
+  .price-sep { font-size:20px; color:var(--muted2); }
   .tool-result .small { font-size:13px; color:var(--muted); margin-top:6px; }
   .tool-result .warn { color:#e2a26b; font-size:13.5px; }
   .calc-disclaimer { margin-top:14px; font-size:11.5px; color:var(--muted2); line-height:1.4; }
@@ -452,8 +457,16 @@
         <div class="tool-field"><label>Ancho Y (mm)</label><input type="number" id="calcY" placeholder="80"></div>
         <div class="tool-field"><label>Alto Z (mm)</label><input type="number" id="calcZ" placeholder="60"></div>
       </div>
-      <div class="tool-row single">
+      <div class="tool-row two">
         <div class="tool-field"><label>Cantidad de piezas</label><input type="number" id="calcQty" placeholder="1" value="1"></div>
+        <div class="tool-field">
+          <label>Tipo de cambio (MXN/USD)</label>
+          <div style="display:flex; gap:6px;">
+            <input type="number" id="calcFx" placeholder="18" value="18" step="0.01" style="flex:1;">
+            <button type="button" id="fxRefresh" title="Actualizar tipo de cambio" style="flex:0 0 auto; background:var(--bg2); border:1px solid var(--hair); color:var(--green-bright); cursor:pointer; padding:0 10px; font-size:15px;">&#8635;</button>
+          </div>
+          <div id="fxStatus" style="font-size:11px; color:var(--muted2); margin-top:4px;">Obteniendo tipo de cambio actual&hellip;</div>
+        </div>
       </div>
       <button class="tool-btn" id="calcBtn">Calcular precio estimado</button>
       <div class="tool-result" id="calcResult"></div>
@@ -764,6 +777,25 @@
     return (obbVol < aabbVol) ? obbDims : aabbDims;
   }
 
+  function meshVolumeAndArea(verts) {
+    // Volumen (suma de tetraedros con signo, teorema de la divergencia) y área de superficie,
+    // calculados directamente sobre los triángulos originales del STL (invariantes a rotación).
+    const nTri = verts.length / 9;
+    let vol = 0, area = 0;
+    for (let t = 0; t < nTri; t++) {
+      const o = t * 9;
+      const x1=verts[o],   y1=verts[o+1], z1=verts[o+2];
+      const x2=verts[o+3], y2=verts[o+4], z2=verts[o+5];
+      const x3=verts[o+6], y3=verts[o+7], z3=verts[o+8];
+      vol += (x1*(y2*z3 - y3*z2) - x2*(y1*z3 - y3*z1) + x3*(y1*z2 - y2*z1)) / 6;
+      const ux = x2-x1, uy = y2-y1, uz = z2-z1;
+      const vx = x3-x1, vy = y3-y1, vz = z3-z1;
+      const cx = uy*vz - uz*vy, cy = uz*vx - ux*vz, cz = ux*vy - uy*vx;
+      area += 0.5 * Math.sqrt(cx*cx + cy*cy + cz*cz);
+    }
+    return { volume: Math.abs(vol), area: area };
+  }
+
   document.getElementById('stlDrop').addEventListener('click', () => document.getElementById('stlFile').click());
   document.getElementById('stlFile').addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -772,6 +804,7 @@
     const ext = file.name.split('.').pop().toLowerCase();
     if (ext === 'step' || ext === 'stp') {
       stlNameEl.innerHTML = '<span style="color:#e2c26b;">Los archivos STEP a&uacute;n no se leen autom&aacute;ticamente aqu&iacute; &mdash; conviértelo a STL o ingresa las medidas abajo.</span>';
+      window.calcMeshStats = null;
       return;
     }
     stlNameEl.textContent = 'Leyendo ' + file.name + '&hellip;';
@@ -780,50 +813,87 @@
       try {
         const verts = parseSTL(ev.target.result);
         const dims = boundingBoxDims(verts);
+        const stats = meshVolumeAndArea(verts);
         if (!dims) {
           stlNameEl.textContent = 'No se pudo leer la geometría del archivo.';
+          window.calcMeshStats = null;
           return;
         }
         const sorted = dims.slice().sort((a,b) => b-a);
         document.getElementById('calcX').value = sorted[0].toFixed(1);
         document.getElementById('calcY').value = sorted[1].toFixed(1);
         document.getElementById('calcZ').value = sorted[2].toFixed(1);
-        stlNameEl.innerHTML = 'Bounding box m&iacute;nimo detectado: <b style="color:var(--green-bright);">' +
-          sorted[0].toFixed(1) + ' &times; ' + sorted[1].toFixed(1) + ' &times; ' + sorted[2].toFixed(1) + ' mm</b>';
+        window.calcMeshStats = { volume: stats.volume, area: stats.area };
+        stlNameEl.innerHTML = 'Bounding box m&iacute;nimo: <b style="color:var(--green-bright);">' +
+          sorted[0].toFixed(1) + ' &times; ' + sorted[1].toFixed(1) + ' &times; ' + sorted[2].toFixed(1) + ' mm</b>' +
+          ' &middot; Volumen: <b style="color:var(--green-bright);">' + stats.volume.toFixed(0) + ' mm&sup3;</b>' +
+          ' &middot; Área: <b style="color:var(--green-bright);">' + stats.area.toFixed(0) + ' mm&sup2;</b>';
       } catch (err) {
         stlNameEl.textContent = 'No se pudo leer el archivo. Verifica que sea un STL válido.';
+        window.calcMeshStats = null;
       }
     };
     reader.readAsArrayBuffer(file);
   });
 
-  // ---- price calculator ----
-  // NOTA: fórmula temporal, pendiente de reemplazar por la fórmula real de César.
+  // ---- tipo de cambio automático (fuente pública, con respaldo manual) ----
+  async function fetchExchangeRate() {
+    const fxStatus = document.getElementById('fxStatus');
+    const fxInput = document.getElementById('calcFx');
+    fxStatus.textContent = 'Obteniendo tipo de cambio actual…';
+    fxStatus.style.color = 'var(--muted2)';
+    try {
+      const resp = await fetch('https://open.er-api.com/v6/latest/USD');
+      const data = await resp.json();
+      const rate = data && data.rates && data.rates.MXN;
+      if (rate) {
+        fxInput.value = rate.toFixed(2);
+        const when = new Date().toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
+        fxStatus.innerHTML = 'Actualizado autom&aacute;ticamente: $' + rate.toFixed(2) + ' MXN (' + when + ')';
+        fxStatus.style.color = 'var(--green-bright)';
+      } else {
+        throw new Error('sin dato');
+      }
+    } catch (err) {
+      fxStatus.innerHTML = 'No se pudo obtener autom&aacute;ticamente &mdash; usando valor manual ($' + fxInput.value + ').';
+      fxStatus.style.color = '#e2c26b';
+    }
+  }
+  document.getElementById('fxRefresh').addEventListener('click', fetchExchangeRate);
+  fetchExchangeRate();
+
+  // ---- price calculator (fórmula real de CAE 3D Print) ----
+  // Unitario (USD) = 0.93 * ( D*0.00018 + E*0.0005 + 0.00004*F*G*H )
+  // D = volumen (mm3), E = área de superficie (mm2), F,G,H = bounding box mínimo (mm)
+  // Unitario (MXN) = Unitario (USD) * tipo de cambio
   document.getElementById('calcBtn').addEventListener('click', () => {
     const x = parseFloat(document.getElementById('calcX').value) || 0;
     const y = parseFloat(document.getElementById('calcY').value) || 0;
     const z = parseFloat(document.getElementById('calcZ').value) || 0;
     const qty = Math.max(1, parseInt(document.getElementById('calcQty').value) || 1);
+    const fx = parseFloat(document.getElementById('calcFx').value) || 18;
     const result = document.getElementById('calcResult');
     if (!x || !y || !z) {
-      result.innerHTML = '<div class="tool-result warn">Ingresa las 3 medidas de tu pieza.</div>';
+      result.innerHTML = '<div class="tool-result warn">Ingresa las 3 medidas de tu pieza, o sube tu STL.</div>';
       return;
     }
-    const boundingCm3 = (x * y * z) / 1000;
-    const materialCm3 = boundingCm3 * 0.20; // typical fill factor for bracket-like parts
-    const materialCost = materialCm3 * 1.01 * 0.045; // $45 USD/kg effective
-    const machineRate = qty >= 20 ? 0.04 : (qty >= 5 ? 0.08 : 0.15);
-    const machineCost = materialCm3 * machineRate;
-    const laborCost = qty >= 20 ? 3 : (qty >= 5 ? 5 : 8);
-    const direct = materialCost + machineCost + laborCost;
-    const unitPrice = direct * 1.30; // 30% margin
-    const total = unitPrice * qty;
 
-    // ahorro estimado vs precio típico de mercado para una pieza equivalente
-    const marketUnit = unitPrice / 0.55;
-    const savingsUnit = marketUnit - unitPrice;
-    const savingsPct = (savingsUnit / marketUnit) * 100;
-    const savingsTotal = savingsUnit * qty;
+    let volume, area, fromFile;
+    if (window.calcMeshStats) {
+      volume = window.calcMeshStats.volume;
+      area = window.calcMeshStats.area;
+      fromFile = true;
+    } else {
+      // sin archivo: aproximación a partir del bounding box (factor de llenado típico)
+      volume = x * y * z * 0.20;
+      area = 2 * (x*y + x*z + y*z);
+      fromFile = false;
+    }
+
+    const unitUSD = 0.93 * (volume * 0.00018 + area * 0.0005 + 0.00004 * x * y * z);
+    const unitMXN = unitUSD * fx;
+    const totalUSD = unitUSD * qty;
+    const totalMXN = unitMXN * qty;
 
     // ¿cabe en una sola corrida del volumen de impresión (380x284x380mm)?
     const dims = [x, y, z].sort((a,b) => b-a);
@@ -833,11 +903,25 @@
       ? '<div class="small ok">&#10003; Cabe en una sola corrida de impresi&oacute;n.</div>'
       : '<div class="small" style="color:#e2c26b;">Esta pieza sale del volumen de una sola corrida &mdash; se secciona y se une, lo cual <b>no es impedimento</b> para fabricarla.</div>';
 
+    const geomNote = fromFile
+      ? `<div class="small">Geometr&iacute;a le&iacute;da del archivo: ${volume.toFixed(0)} mm&sup3; de volumen, ${area.toFixed(0)} mm&sup2; de &aacute;rea.</div>`
+      : `<div class="small" style="color:#e2c26b;">Volumen y &aacute;rea aproximados (sin STL). Sube tu archivo para un c&aacute;lculo exacto.</div>`;
+
     result.innerHTML = `
-      <div class="big">$${unitPrice.toFixed(2)} <span style="font-size:16px;color:var(--muted);">USD / pieza</span></div>
-      <div class="small">Total estimado para ${qty} pza${qty>1?'s':''}: <b style="color:var(--text);">$${total.toFixed(2)} USD</b></div>
-      <div class="small">Material estimado: ~${materialCm3.toFixed(1)} cm&sup3; de Nylon 12 por pieza.</div>
-      <div class="small" style="margin-top:10px;">Ahorro estimado vs. mercado: <b style="color:var(--green-bright);">${savingsPct.toFixed(0)}% (~$${savingsTotal.toFixed(2)} USD en total)</b></div>
+      <div class="price-pair">
+        <div class="price-item">
+          <div class="big">$${unitUSD.toFixed(2)}</div>
+          <div class="price-currency">USD / pieza</div>
+        </div>
+        <div class="price-sep">&#8776;</div>
+        <div class="price-item">
+          <div class="big mxn">$${unitMXN.toFixed(2)}</div>
+          <div class="price-currency">MXN / pieza</div>
+        </div>
+      </div>
+      <div class="small" style="margin-top:8px;">Tipo de cambio usado: $${fx} MXN por USD</div>
+      <div class="small">Total para ${qty} pza${qty>1?'s':''}: <b style="color:var(--text);">$${totalUSD.toFixed(2)} USD</b> / <b style="color:var(--text);">$${totalMXN.toFixed(2)} MXN</b></div>
+      ${geomNote}
       ${fitNote}
     `;
   });
