@@ -2042,16 +2042,18 @@
         n.childNodes.forEach(doNode);
       }
     }
-    function apply(){ busy=true; try{ doNode(document.body); }finally{ busy=false; }
+    let mo=null;
+    function apply(){ busy=true; try{ doNode(document.body); }finally{ if(mo) mo.takeRecords(); busy=false; }
       document.documentElement.lang=lang;
       document.title = lang==='en' ? 'CAE 3D Print — Industrial additive manufacturing' : 'CAE 3D Print — Manufactura aditiva industrial';
       const b=document.getElementById('langBtn'); if(b){ b.textContent = lang==='en'?'ES':'EN'; b.setAttribute('aria-label', lang==='en'?'Cambiar a español':'Switch to English'); } }
-    new MutationObserver(ms=>{ if(busy||lang!=='en') return; busy=true; try{ ms.forEach(m=>{ if(m.type==='characterData'){ orig.set(m.target,m.target.nodeValue); doNode(m.target);} else m.addedNodes.forEach(doNode); }); }finally{ busy=false; } })
-      .observe(document.body,{childList:true,subtree:true,characterData:true});
+    mo=new MutationObserver(ms=>{ if(busy||lang!=='en') return; busy=true; try{ ms.forEach(m=>{ if(m.type==='characterData'){ orig.set(m.target,m.target.nodeValue); doNode(m.target);} else m.addedNodes.forEach(doNode); }); }finally{ mo.takeRecords(); busy=false; } });
+    mo.observe(document.body,{childList:true,subtree:true,characterData:true});
     function setLang(l){ lang=l; try{localStorage.setItem('cae_lang',l);}catch(e){} apply(); }
     const btn=document.getElementById('langBtn'); if(btn) btn.addEventListener('click',()=>setLang(lang==='en'?'es':'en'));
     let saved=null; try{saved=localStorage.getItem('cae_lang');}catch(e){}
-    if(saved==='en') setLang('en');
+    let qs=null; try{ qs=new URLSearchParams(location.search).get('lang'); }catch(e){}
+    if(qs==='en'||qs==='es') setLang(qs); else if(saved==='en') setLang('en');
     window.__setLang=setLang;
   })();
 
