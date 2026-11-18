@@ -430,6 +430,10 @@
   .calc-grid { display:grid; grid-template-columns:minmax(0,5fr) minmax(0,6fr); gap:44px; align-items:start; }
   .calc-right { min-width:0; border-left:1px solid #282f24; padding-left:44px; }
   .calc-right .pk-box { margin-top:0; }
+  .formal-cta { margin-top:18px; padding:18px 20px; border:1px solid rgba(124,236,85,.35); border-radius:14px; background:rgba(124,236,85,.06); }
+  .formal-cta .fc-t { font-family:var(--serif); font-size:18px; color:#f5f6f2; margin-bottom:4px; }
+  .formal-cta .fc-s { font-size:14px; color:#a8aba3; margin-bottom:12px; }
+  .formal-cta .btn { width:100%; }
   @media (max-width:980px){ .calc-grid { grid-template-columns:1fr; gap:24px; } .calc-right { border-left:0; padding-left:0; border-top:1px solid #282f24; padding-top:24px; } .light .calc-panel { padding:32px 20px; } }
   .pk-box { background:#080a08; border:1px solid rgba(124,236,85,.18); border-radius:14px; padding:12px 14px 14px; margin:0 0 18px; }
   .pk-box canvas { width:100%; height:250px; display:block; }
@@ -662,6 +666,11 @@
       <div class="calc-right">
       <div class="pk-box" id="packBox" style="display:none;"><canvas id="packCv" aria-label="Piezas acomodadas en el bucket de impresi&oacute;n"></canvas><div class="pk-t" id="packT"></div><div class="pk-d" id="packD"></div></div>
       <div class="tool-result" id="calcResult"></div>
+      <div class="formal-cta" id="formalCta" style="display:none">
+        <div class="fc-t">&iquest;Necesitas una cotizaci&oacute;n formal?</div>
+        <div class="fc-s">D&eacute;janos tus datos y te respondemos con precio final y tiempos de entrega.</div>
+        <button type="button" class="btn btn-primary" id="formalBtn">Solicitar cotizaci&oacute;n formal</button>
+      </div>
       <div class="calc-disclaimer">Precio de referencia en d&oacute;lares (USD), &uacute;nicamente informativo. No representa ning&uacute;n compromiso ni cotizaci&oacute;n formal.</div>
       </div>
      </div>
@@ -1379,8 +1388,27 @@
     quoteBackdrop.classList.add('open');
   }
   function closeQuote() { quoteBackdrop.classList.remove('open'); }
-  document.getElementById('openQuote1').addEventListener('click', openQuote);
-  document.getElementById('openQuote2').addEventListener('click', openQuote);
+  function goTools(){ const t=document.getElementById('herramientas'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); const nl=document.getElementById('navLinks'); if(nl) nl.classList.remove('open'); }
+  document.getElementById('openQuote1').addEventListener('click', goTools);
+  document.getElementById('openQuote2').addEventListener('click', goTools);
+  (function(){ const fb=document.getElementById('formalBtn'), fc=document.getElementById('formalCta'), cr=document.getElementById('calcResult');
+    if(fb) fb.addEventListener('click',()=>window.__openFormalQuote());
+    if(cr&&fc) new MutationObserver(()=>{ fc.style.display = cr.querySelector('.big') ? 'block' : 'none'; }).observe(cr,{childList:true,subtree:true}); })();
+  window.__openFormalQuote = function(){
+    openQuote();
+    try{
+      const d=document.getElementById('qDesc'); if(d && !d.value.trim()){
+        const g=id=>(document.getElementById(id)||{}).value||'';
+        const big=document.querySelector('#calcResult .big'); const tot=(document.getElementById('calcResult').innerText.match(/Total para[^$]*\$([\d,]+(?:\.\d+)?)\s*USD/)||[])[1];
+        if(big && g('calcX')){
+          let t='Pieza de '+g('calcX')+' × '+g('calcY')+' × '+g('calcZ')+' mm, cantidad: '+(g('calcQty')||1)+' pzas.';
+          t+=' Estimado del cotizador: '+big.innerText.trim()+' USD/pza'+(tot?' (total $'+tot+' USD)':'')+'.';
+          const pp=document.getElementById('postPaint'); if(pp&&pp.checked) t+=' Con pintura.';
+          d.value=t;
+        }
+      }
+    }catch(e){}
+  };
   document.getElementById('quoteClose').addEventListener('click', closeQuote);
   document.getElementById('quoteCloseSuccess').addEventListener('click', closeQuote);
   quoteBackdrop.addEventListener('click', (e) => { if (e.target === quoteBackdrop) closeQuote(); });
@@ -1924,7 +1952,7 @@
     "Sube tu STL para un cálculo exacto, o coloca las dimensiones máximas de tu pieza.":"Upload your STL for an exact calculation, or enter your part's maximum dimensions.",
     "Sube tu STL o STEP":"Upload your STL or STEP","Calculamos el bounding box mínimo automáticamente":"We calculate the minimum bounding box automatically",
     "Tu archivo se procesa en tu propio navegador — no se sube ni se guarda en ningún servidor.":"Your file is processed in your own browser — it is not uploaded or stored on any server.",
-    "o":"or","Largo X (mm)":"Length X (mm)","Ancho Y (mm)":"Width Y (mm)","Alto Z (mm)":"Height Z (mm)","Cantidad de piezas":"Number of parts","Postprocesos":"Post-processing","Pintura":"Paint","Incluye pintura.":"Includes paint.",
+    "o":"or","Largo X (mm)":"Length X (mm)","Ancho Y (mm)":"Width Y (mm)","Alto Z (mm)":"Height Z (mm)","Cantidad de piezas":"Number of parts","Postprocesos":"Post-processing","¿Necesitas una cotización formal?":"Need a formal quote?","Déjanos tus datos y te respondemos con precio final y tiempos de entrega.":"Leave us your details and we will reply with the final price and lead times.","Solicitar cotización formal":"Request a formal quote","Pintura":"Paint","Incluye pintura.":"Includes paint.",
     "Tipo de cambio (MXN/USD)":"Exchange rate (MXN/USD)","Calcular precio estimado":"Calculate estimated price","Limpiar":"Clear",
     "El precio se actualiza solo al cambiar medidas o cantidad.":"The price updates automatically when you change size or quantity.",
     "USD / pieza":"USD / piece","MXN / pieza":"MXN / piece",
