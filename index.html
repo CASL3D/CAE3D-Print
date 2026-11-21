@@ -602,7 +602,33 @@
   .formal-cta .fc-t { font-family:var(--serif); font-size:18px; color:#f5f6f2; margin-bottom:4px; }
   .formal-cta .fc-s { font-size:14px; color:#a8aba3; margin-bottom:12px; }
   .formal-cta .btn { width:100%; }
-  @media (max-width:980px){ .calc-grid { grid-template-columns:1fr; gap:24px; } .calc-right { border-left:0; padding-left:0; border-top:1px solid #282f24; padding-top:24px; } .light .calc-panel { padding:32px 20px; } }
+
+  /* ---- Opción B: fila superior + pestañas ---- */
+  .calc-panel{ --pt:cmp; }
+  .calc-grid{ grid-template-columns:minmax(0,5fr) minmax(0,5fr) minmax(0,4.4fr); gap:20px 32px; align-items:start; }
+  .calc-right, #calcResult{ display:contents; }
+  .calc-left{ grid-column:1; grid-row:1 / span 2; }
+  #packBox{ grid-column:2; grid-row:1; margin:0; }
+  .calc-grid .live-hint{ grid-column:2; grid-row:2; margin-top:0; }
+  .pc-main{ grid-column:3; grid-row:1; padding:22px; border:1px solid rgba(124,236,85,.28); border-radius:16px; background:rgba(124,236,85,.05); }
+  .pc-main .big{ font-size:34px; }
+  .calc-grid #calcResult > .warn, .calc-grid #calcResult > .tool-result{ grid-column:3; grid-row:1; }
+  .formal-cta{ grid-column:2 / 4; grid-row:2; margin-top:0; align-self:start; padding:16px 20px; display:grid; grid-template-columns:1fr auto; column-gap:24px; align-items:center; }
+  .formal-cta .fc-t,.formal-cta .fc-s{ grid-column:1; margin:0 0 2px; } .formal-cta .btn{ grid-column:2; grid-row:1 / span 2; width:auto; white-space:nowrap; }
+  @media (min-width:1101px){ .calc-grid .live-hint{ display:none; } }
+  .res-tabs{ display:none; grid-column:1 / -1; grid-row:3; gap:6px; border-bottom:1px solid #282f24; margin-top:8px; overflow-x:auto; }
+  .calc-panel:has(#calcResult .big) .res-tabs{ display:flex; }
+  .res-tabs button{ background:none; border:0; color:#a8aba3; font:600 14px var(--sans, inherit); padding:11px 18px; cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap; }
+  .res-tabs button.on{ color:#a3ee54; border-bottom-color:#71d637; }
+  .pc-pane, #scaleBox{ grid-column:1 / -1; grid-row:4; display:none; margin-top:0; }
+  .calc-panel[data-tab="cmp"] .pc-cmp, .calc-panel[data-tab="det"] .pc-det, .calc-panel[data-tab="qty"] #scaleBox{ display:block; }
+  .calc-grid .cmp-box{ margin-top:0; }
+  .calc-disclaimer{ grid-column:1 / -1; grid-row:5; }
+  .pc-det{ columns:2; column-gap:32px; } .pc-det > *{ break-inside:avoid; }
+  @media (max-width:1100px){ .calc-grid{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); } .calc-left{ grid-column:1 / -1; grid-row:auto; } #packBox{ grid-column:1; grid-row:auto; } .pc-main,.calc-grid #calcResult > .tool-result{ grid-column:2; grid-row:auto; } .calc-grid .live-hint{ grid-column:1; grid-row:auto; } .formal-cta{ grid-column:1 / -1; grid-row:auto; } }
+  @media (max-width:1100px){ .calc-left{order:1} #packBox{order:2} .calc-grid .live-hint{order:3} .pc-main,.calc-grid #calcResult > .tool-result{order:4} .formal-cta{order:5} .res-tabs{order:6} .pc-pane,#scaleBox{order:7} .calc-disclaimer{order:8} }
+  @media (max-width:760px){ .calc-grid{ grid-template-columns:1fr; } .calc-left,#packBox,.pc-main,.calc-grid #calcResult > .tool-result,.calc-grid .live-hint,.formal-cta,.res-tabs,.pc-pane,#scaleBox,.calc-disclaimer{ grid-column:1; grid-row:auto; } .pc-det{ columns:1; } .formal-cta{ display:block; } .formal-cta .btn{ width:100%; } }
+  @media (max-width:980px){ .light .calc-panel { padding:32px 20px; } }
   .pk-box { background:#080a08; border:1px solid rgba(124,236,85,.18); border-radius:14px; padding:12px 14px 14px; margin:0 0 18px; }
   .pk-box canvas { width:100%; height:250px; display:block; }
   .pk-box .pk-t { color:#fff; font-weight:700; font-size:14px; margin:6px 0 4px; font-family:var(--serif); }
@@ -836,7 +862,7 @@
     </div>
   </div>
   <div class="tools">
-    <div class="tool-panel calc-panel">
+    <div class="tool-panel calc-panel" data-tab="cmp">
      <div class="calc-grid">
       <div class="calc-left">
       <h3>Calculadora de precio</h3>
@@ -903,6 +929,7 @@
         <div class="fc-s">D&eacute;janos tus datos y te respondemos con precio final y tiempos de entrega.</div>
         <button type="button" class="btn btn-primary" id="formalBtn">Solicitar cotizaci&oacute;n formal</button>
       </div>
+      <div class="res-tabs" id="resTabs" role="tablist"><button type="button" class="on" data-t="cmp">Comparativa</button><button type="button" data-t="qty">Por cantidad</button><button type="button" data-t="det">Detalles</button></div>
       <div class="calc-disclaimer">Precio de referencia en d&oacute;lares (USD), &uacute;nicamente informativo. No representa ning&uacute;n compromiso ni cotizaci&oacute;n formal.</div>
       </div>
      </div>
@@ -1545,7 +1572,10 @@
       ? `<div class="small" style="margin-top:10px; color:var(--muted2);">Precio con descuento por volumen: te recomendamos escribirnos para confirmar la cotizaci&oacute;n final antes de producci&oacute;n.</div>`
       : '';
 
+    const fitShort = fits ? fitNote : '<div class="small" style="color:#e2c26b;">Pieza seccionada &mdash; ver Detalles.</div>';
+    const detBlocks = (fits ? '' : sectionNote) + (bucketBlock || packingNote) + geomNote + confirmNote + rangeLine + extraBlocks;
     result.innerHTML = `
+      <div class="pc-main">
       <div class="price-pair">
         <div class="price-item">
           <div class="big">$${finalUnitUSD.toFixed(2)}</div>
@@ -1560,14 +1590,11 @@
       ${normalPriceLine}
       ${paintLine}
       <div class="small" style="margin-top:8px;">Tipo de cambio usado: $${fx} MXN por USD</div>
-      <div class="small">Total para ${qty} pza${qty>1?'s':''}: <b style="color:var(--text);">$${totalUSD.toFixed(2)} USD</b> / <b style="color:var(--text);">$${totalMXN.toFixed(2)} MXN</b></div>
-      ${bucketBlock || packingNote}
-      ${geomNote}
-      ${fitNote}
-      ${confirmNote}
-      ${rangeLine}
-      ${extraBlocks}
-      ${window.__cmpHTML ? window.__cmpHTML(normalUnitUSD, unitNoPost, qty, {x, y, z, volume, area}) : ''}
+      <div class="small total-line">Total para ${qty} pza${qty>1?'s':''}: <b style="color:var(--text);">$${totalUSD.toFixed(2)} USD</b> / <b style="color:var(--text);">$${totalMXN.toFixed(2)} MXN</b></div>
+      ${fitShort}
+      </div>
+      <div class="pc-pane pc-cmp">${window.__cmpHTML ? window.__cmpHTML(normalUnitUSD, unitNoPost, qty, {x, y, z, volume, area}) : ''}</div>
+      <div class="pc-pane pc-det">${detBlocks || '<div class="small">Sin detalles adicionales.</div>'}</div>
     `;
   });
 
@@ -1649,7 +1676,7 @@
     try{
       const d=document.getElementById('qDesc'); if(d && !d.value.trim()){
         const g=id=>(document.getElementById(id)||{}).value||'';
-        const big=document.querySelector('#calcResult .big'); const tot=(document.getElementById('calcResult').innerText.match(/Total para[^$]*\$([\d,]+(?:\.\d+)?)\s*USD/)||[])[1];
+        const big=document.querySelector('#calcResult .big'); const tot=(document.getElementById('calcResult').innerText.match(/Total[^$]*\$([\d,]+(?:\.\d+)?)\s*USD/)||[])[1];
         if(big && g('calcX')){
           let t='Pieza de '+g('calcX')+' × '+g('calcY')+' × '+g('calcZ')+' mm, cantidad: '+(g('calcQty')||1)+' pzas.';
           t+=' Estimado del cotizador: '+big.innerText.trim()+' USD/pza'+(tot?' (total $'+tot+' USD)':'')+'.';
@@ -1945,7 +1972,7 @@
     function read(){
       const big=res.querySelector('.big'); if(!big) return null;
       const u=parseFloat(big.innerText.replace(/[^\d.]/g,''));
-      const m=res.innerText.match(/Total para[^$]*\$([\d,]+(?:\.\d+)?)\s*USD/);
+      const m=res.innerText.match(/Total[^$]*\$([\d,]+(?:\.\d+)?)\s*USD/);
       const t=m?parseFloat(m[1].replace(/,/g,'')):NaN;
       const bk=res.querySelector('.bk-box'); const bb=bk?parseFloat(bk.dataset.bunit):NaN; return (isFinite(u)&&isFinite(t))?{u,t,b:isFinite(bb)?bb:null,ap:bk?bk.dataset.apply:''}:null;
     }
@@ -2170,7 +2197,7 @@
     "MANUFACTURA ADITIVA INDUSTRIAL · TOLUCA, ESTADO DE MÉXICO":"INDUSTRIAL ADDITIVE MANUFACTURING · TOLUCA, MEXICO",
     "De prototipos a":"From prototypes to","producción real.":"real production.",
     "Fabricamos piezas funcionales en Nylon 12 con tecnología HP Multi Jet Fusion, para equipos de ingeniería y manufactura automotriz e industrial.":"We make functional Nylon 12 parts with HP Multi Jet Fusion technology, for engineering teams and automotive and industrial manufacturing.",
-    "Cotizar una pieza":"Quote a part","¿Qué necesitas fabricar?":"What do you need to make?","Elige una opción y te llevamos al cotizador con una pieza de ejemplo.":"Pick one and we'll take you to the calculator with a sample part.","Fixtures y herramentales":"Fixtures and tooling","Guías, galgas y dispositivos de validación a la medida.":"Custom guides, gauges and validation fixtures.","Piezas funcionales y refacciones":"Functional parts and spares","Carcasas, soportes y piezas de reposición en series cortas.":"Housings, brackets and replacement parts in short runs.","Prototipos funcionales":"Functional prototypes","Valida forma y ajuste con una pieza real en Nylon 12.":"Validate form and fit with a real Nylon 12 part.","Pruébalo en 5 segundos":"Try it in 5 seconds","Fixture de validación · 220 × 120 × 80 mm":"Validation fixture · 220 × 120 × 80 mm","Anidado de piezas orgánicas dentro del volumen de impresión (38 × 28.4 × 38 cm) — ilustración de capacidad por corrida.":"Organic parts nested inside the build volume (38 × 28.4 × 38 cm) — illustration of per-run capacity.","USD por pieza":"USD per part","menos que otro proveedor*":"less than another provider*","Cotiza tu pieza →":"Quote your part →","*Estimado frente a la fórmula de un cotizador público; no es una cotización formal.":"*Estimate against a public calculator's formula; not a formal quote.","¿Tienes un STL? Te cotizo hoy":"Got an STL? I'll quote it today","Cotizar algo similar":"Quote something similar","Pieza":"Part","Resultado":"Result","Opciones avanzadas: tipo de cambio y pintura":"Advanced options: exchange rate and paint","Inicio":"Home","Cotizador":"Calculator","Comparativa":"Comparison","Casos":"Cases","días":"days","Desde 1 pieza, sin mínimos":"From 1 part, no minimums","Cotización en minutos":"Quote in minutes","Entrega en 3–5 días":"Delivery in 3–5 days","mm por corrida":"mm per run","NESTING 3D":"3D NESTING","Llenamos cada corrida hasta el último rincón":"We fill every run to the last corner","Acomodamos decenas o cientos de piezas en un solo bucket de 380 × 284 × 380 mm. Mientras más piezas caben por corrida, menos pagas por cada una.":"We nest dozens or hundreds of parts in a single 380 × 284 × 380 mm bucket. The more parts fit per run, the less you pay for each one.","Calcular mi pieza":"Calculate my part","Ver casos de éxito":"See case studies",
+    "Cotizar una pieza":"Quote a part","Comparativa":"Comparison","Por cantidad":"By quantity","Detalles":"Details","Pieza seccionada — ver Detalles.":"Part is sectioned — see Details.","¿Qué necesitas fabricar?":"What do you need to make?","Elige una opción y te llevamos al cotizador con una pieza de ejemplo.":"Pick one and we'll take you to the calculator with a sample part.","Fixtures y herramentales":"Fixtures and tooling","Guías, galgas y dispositivos de validación a la medida.":"Custom guides, gauges and validation fixtures.","Piezas funcionales y refacciones":"Functional parts and spares","Carcasas, soportes y piezas de reposición en series cortas.":"Housings, brackets and replacement parts in short runs.","Prototipos funcionales":"Functional prototypes","Valida forma y ajuste con una pieza real en Nylon 12.":"Validate form and fit with a real Nylon 12 part.","Pruébalo en 5 segundos":"Try it in 5 seconds","Fixture de validación · 220 × 120 × 80 mm":"Validation fixture · 220 × 120 × 80 mm","Anidado de piezas orgánicas dentro del volumen de impresión (38 × 28.4 × 38 cm) — ilustración de capacidad por corrida.":"Organic parts nested inside the build volume (38 × 28.4 × 38 cm) — illustration of per-run capacity.","USD por pieza":"USD per part","menos que otro proveedor*":"less than another provider*","Cotiza tu pieza →":"Quote your part →","*Estimado frente a la fórmula de un cotizador público; no es una cotización formal.":"*Estimate against a public calculator's formula; not a formal quote.","¿Tienes un STL? Te cotizo hoy":"Got an STL? I'll quote it today","Cotizar algo similar":"Quote something similar","Pieza":"Part","Resultado":"Result","Opciones avanzadas: tipo de cambio y pintura":"Advanced options: exchange rate and paint","Inicio":"Home","Cotizador":"Calculator","Comparativa":"Comparison","Casos":"Cases","días":"days","Desde 1 pieza, sin mínimos":"From 1 part, no minimums","Cotización en minutos":"Quote in minutes","Entrega en 3–5 días":"Delivery in 3–5 days","mm por corrida":"mm per run","NESTING 3D":"3D NESTING","Llenamos cada corrida hasta el último rincón":"We fill every run to the last corner","Acomodamos decenas o cientos de piezas en un solo bucket de 380 × 284 × 380 mm. Mientras más piezas caben por corrida, menos pagas por cada una.":"We nest dozens or hundreds of parts in a single 380 × 284 × 380 mm bucket. The more parts fit per run, the less you pay for each one.","Calcular mi pieza":"Calculate my part","Ver casos de éxito":"See case studies",
     "piezas de producción mediana al mes":"medium-run production parts per month","Nylon 12, material principal":"Nylon 12, main material","tecnología de impresión industrial":"industrial printing technology",
     "3–5 días":"3–5 days","tiempo de entrega típico":"typical lead time",
     "Cómo funciona HP Multi Jet Fusion":"How HP Multi Jet Fusion works",
@@ -2693,6 +2720,10 @@ window.__GEO_BOX=GEO_BOX;
   }
   window.addEventListener('scroll',upd,{passive:true}); upd();
 })();
+
+  (function(){ const pn=document.querySelector('.calc-panel'), tb=document.getElementById('resTabs'); if(!pn||!tb) return;
+    tb.addEventListener('click',e=>{ const b=e.target.closest('button[data-t]'); if(!b) return; pn.setAttribute('data-tab',b.dataset.t); tb.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); });
+  })();
 </script>
 
 </body>
